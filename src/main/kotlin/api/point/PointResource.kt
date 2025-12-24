@@ -11,7 +11,7 @@ import jakarta.ws.rs.core.Response
 @Path("/point")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
-public class PointResource {
+class PointResource {
     @POST
     @Path("/throw/")
     @Produces(MediaType.TEXT_PLAIN)

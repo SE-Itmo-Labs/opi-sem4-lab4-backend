@@ -10,7 +10,7 @@ import jakarta.ws.rs.core.Response
 @Path("/user")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
-public class UserResource {
+class UserResource {
 
     @POST
     @Path("/auth/")
