@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<persistence xmlns="https://jakarta.ee/xml/ns/persistence"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xsi:schemaLocation="https://jakarta.ee/xml/ns/persistence
+                                 https://jakarta.ee/xml/ns/persistence/persistence_3_2.xsd"
+             version="3.0">
+
+    <persistence-unit name="default" transaction-type="JTA">
+        <provider>org.eclipse.persistence.jpa.PersistenceProvider</provider>
+        <jta-data-source>java:jboss/datasources/PostgreSQLDS</jta-data-source>
+
+        <class>database.model.Point2DRow</class>
+        <class>database.model.User</class>
+
+<!--        <exclude-unlisted-classes>false</exclude-unlisted-classes>-->
+
+        <properties>
+            <!-- Указываем JNDI-имя TransactionManager в WildFly -->
+            <property name="eclipselink.target-server" value="JBoss"/>
+            <property name="eclipselink.jta.transaction.manager"
+                      value="java:jboss/TransactionManager"/>
+
+            <!-- Включение логирования SQL -->
+            <property name="eclipselink.logging.level.sql" value="FINE"/>
+            <property name="eclipselink.logging.parameters" value="true"/>
+
+            <!-- Генерация схемы -->
+            <!--            <property name="jakarta.persistence.schema-generation.database.action" value="update"/>-->
+            <property name="jakarta.persistence.schema-generation.database.action" value="create-or-extend-tables"/>
+
+
+            <!-- Необязательно: явное указание диалекта (EclipseLink обычно определяет сам) -->
+            <property name="eclipselink.target-database" value="PostgreSQL"/>
+        </properties>
+    </persistence-unit>
+</persistence>

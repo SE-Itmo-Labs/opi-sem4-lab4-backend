@@ -1,9 +1,12 @@
 package com.ssnagin.servlets.coordinates.geometry
 
-data class Point2DR(
-    val x: Float,
-    val y: Float,
-    val R: Float
+import jakarta.persistence.Embeddable
+
+@Embeddable
+open class Point2DR(
+    var x: Float,
+    var y: Float,
+    var R: Float,
 ) {
-    constructor() : this(0.0f,0.0f,0.0f)
+    constructor() : this(0.0f, 0.0f, 0.0f)
 }
