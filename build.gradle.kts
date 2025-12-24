@@ -15,6 +15,9 @@ dependencies {
     compileOnly("jakarta.platform:jakarta.jakartaee-web-api:10.0.0")
     compileOnly("jakarta.ws.rs:jakarta.ws.rs-api:3.1.0")
 
+    implementation("com.fasterxml.jackson.jaxrs:jackson-jaxrs-json-provider:2.20.1")
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.20.1")
+
     providedCompile("jakarta.platform:jakarta.jakartaee-api:10.0.0")
     implementation("org.eclipse.persistence:org.eclipse.persistence.jpa:4.0.8")
 

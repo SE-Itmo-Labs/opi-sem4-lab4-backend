@@ -154,6 +154,8 @@ deploy() {
     # Получаем пароль
     get_password
 
+    python project_structure.py
+
     # Сборка
 #    echo "🔨 Сборка фронтенда (npm)..."
 #    if ! npm run build; then
@@ -188,7 +190,7 @@ deploy() {
     fi
 
     echo "✅ Деплой успешно завершен!"
-    echo "https://itmo.ssngn.ru/lab2/"
+    echo "https://itmo.ssngn.ru/lab4/"
 }
 
 # Деплой на WildFly через CLI
