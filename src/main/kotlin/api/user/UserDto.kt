@@ -1,4 +1,6 @@
 package api.user
 
-class UserDto {
-}
+data class UserDto(
+    val username : String?,
+    val password : String?,
+) { }

@@ -20,7 +20,8 @@ class AuthorizationFilter : ContainerRequestFilter {
             .build()
 
         private val PUBLIC_PATHS = setOf(
-            "/user/auth"
+            "/user/auth",
+            "/user/register",
         )
     }
 

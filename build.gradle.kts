@@ -28,6 +28,8 @@ dependencies {
 
     implementation("com.fasterxml.jackson.core:jackson-databind:2.20.1")
 
+    implementation("at.favre.lib:bcrypt:0.10.2")
+
     providedCompile("org.eclipse.persistence:eclipselink:4.0.8")
 
     testImplementation(kotlin("test"))
