@@ -1,6 +1,7 @@
 package api.response
 
 import jakarta.json.Json
+import jakarta.json.JsonArray
 import jakarta.json.JsonObject
 import jakarta.json.JsonObjectBuilder
 
@@ -18,6 +19,10 @@ open class GeneralResponseBuilder {
 
     open fun add(title : String, message : Int) {
         body.add(title, message) // Kostyl
+    }
+
+    open fun add(title : String, message : JsonArray) {
+        body.add(title, message)
     }
 
     open fun ok(message : String) : JsonObject {

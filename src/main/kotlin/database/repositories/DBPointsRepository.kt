@@ -30,4 +30,19 @@ open class DBPointsRepository : JpaRepository<Point2DRow, Long>() {
         entityManager.createQuery("DELETE FROM Point2DRow p WHERE p.user.id = :userId")
             .setParameter("userId", userId)
             .executeUpdate()
+
+    @Transactional
+    open fun removePoint(point: Point2DRow) {
+        entityManager.remove(point)
+    }
+
+    @Transactional
+    open fun deletePointById(id: Long): Boolean {
+        val point = entityManager.find(Point2DRow::class.java, id)
+        if (point != null) {
+            entityManager.remove(point)
+            return true
+        }
+        return false
+    }
 }

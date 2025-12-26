@@ -1,17 +1,42 @@
 package api.point
 
-import jakarta.ws.rs.Consumes
-import jakarta.ws.rs.GET
-import jakarta.ws.rs.POST
-import jakarta.ws.rs.Path
-import jakarta.ws.rs.Produces
+import JwtUtil
+import api.GenericResource
+import api.ProjectHTTPHeaders
+import api.response.GeneralResponseBuilder
+import com.ssnagin.servlets.coordinates.exceptions.PointOutOfBoundariesException
+import com.ssnagin.servlets.coordinates.geometry.Point2DR
+import com.ssnagin.servlets.coordinates.validator.GeometryValidator
+import database.model.DotType
+import database.model.Point2DRow
+import database.repositories.DBPointsRepository
+import database.repositories.DBUserRepository
+import jakarta.inject.Inject
+import jakarta.json.Json
+import jakarta.json.JsonArrayBuilder
+import jakarta.ws.rs.*
+import jakarta.ws.rs.core.Context
+import jakarta.ws.rs.core.HttpHeaders
 import jakarta.ws.rs.core.MediaType
 import jakarta.ws.rs.core.Response
+import java.time.LocalDateTime
 
 @Path("/point")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
-open class PointResource {
+open class PointResource : GenericResource() {
+
+    @Inject
+    private lateinit var pointsRepository: DBPointsRepository
+
+    @Inject
+    private lateinit var userRepository: DBUserRepository
+
+    @Inject
+    private lateinit var jwtUtil: JwtUtil
+
+    private val geometryValidator = GeometryValidator()
+
     @POST
     @Path("/throw/")
     @Produces(MediaType.TEXT_PLAIN)
@@ -23,5 +48,145 @@ open class PointResource {
     @Path("/test/")
     open fun test() : Response {
         return Response.ok().entity("{'test': 123}").build()
+    }
+
+    @POST
+    @Path("/save/")
+    open fun save(
+        @Context headers: HttpHeaders,
+        pointDto: PointDto
+    ) : Response {
+        val token = headers.getHeaderString(ProjectHTTPHeaders.AUTHORIZATION)
+
+        val username = jwtUtil.getUsernameFromToken(token)
+            ?: return unauthorized("Невалидный токен")
+
+        val user = userRepository.findByUsername(username)
+            ?: return unauthorized("Пользователь не найден")
+
+        val responseBuilder = GeneralResponseBuilder()
+
+        val point2DR = Point2DR(pointDto.x, pointDto.y, pointDto.R)
+        var inArea = false
+
+        val startTime = System.nanoTime()
+
+        try {
+            geometryValidator.validate(point2DR)
+            inArea = true
+        } catch (_: PointOutOfBoundariesException) { }
+
+        val endTime = System.nanoTime()
+        val executionTime = (endTime - startTime)
+
+        val pointRow = Point2DRow(
+            user = user,
+            type = DotType.SIMPLE,
+            point2DR = point2DR,
+            timestamp = LocalDateTime.now().plusHours(3),
+            executionTime = executionTime,
+            inArea = inArea
+        )
+
+        pointsRepository.save(pointRow)
+
+        val point = ArrayList<Point2DRow>()
+        point.add(pointRow)
+
+        responseBuilder.add("points", buildJsonArray(point))
+
+        return Response.ok(responseBuilder.ok("Point has been thrown")).build()
+    }
+
+    @GET
+    @Path("/all")
+    open fun getAllPoints(): Response {
+        val allPoints = pointsRepository.getAllPoints()
+        val response = GeneralResponseBuilder()
+        response.add("points", allPoints.size)
+        response.add("data", buildJsonArray(allPoints))
+        return Response.ok(response.ok("Here I am! Rock you like a Hurricane!")).build()
+    }
+
+    @GET
+    @Path("/my")
+    open fun getMyPoints(@Context headers: HttpHeaders): Response {
+        val token = headers.getHeaderString(ProjectHTTPHeaders.AUTHORIZATION)
+
+        val username = jwtUtil.getUsernameFromToken(token)
+            ?: return unauthorized("Невалидный токен")
+
+        val user = userRepository.findByUsername(username)
+            ?: return unauthorized("Пользователь не найден")
+
+        val myPoints = pointsRepository.findAllByUser(user.id!!)
+        val response = GeneralResponseBuilder()
+        response.add("points", myPoints.size)
+        response.add("data", buildJsonArray(myPoints))
+
+        return Response.ok(response.ok("All of your points here:)))")).build()
+    }
+
+    @DELETE
+    @Path("/{id}")
+    open fun deletePoint(
+        @Context headers: HttpHeaders,
+        @PathParam("id") id: Long
+    ): Response {
+        val token = headers.getHeaderString(ProjectHTTPHeaders.AUTHORIZATION)
+
+        val username = jwtUtil.getUsernameFromToken(token)
+            ?: return unauthorized("Невалидный токен")
+
+        val user = userRepository.findByUsername(username)
+            ?: return unauthorized("Пользователь не найден")
+
+        val point = pointsRepository.findById(id, Point2DRow::class.java)
+            ?: return badRequest("Точка не найдена")
+
+        if (point.user.id != user.id) {
+            return badRequest("Свои точки только можно удалять, ненене)")
+        }
+
+        val deleted = pointsRepository.deletePointById(id)
+        if (!deleted) {
+            return badRequest("Не удалось удалить точку")
+        }
+
+        return ok("Точка удалена")
+    }
+
+    @DELETE
+    @Path("/my")
+    open fun deleteAllMyPoints(@Context headers: HttpHeaders): Response {
+        val token = headers.getHeaderString(ProjectHTTPHeaders.AUTHORIZATION)
+
+        val username = jwtUtil.getUsernameFromToken(token)
+            ?: return unauthorized("Невалидный токен")
+
+        val user = userRepository.findByUsername(username)
+            ?: return unauthorized("Пользователь не найден")
+
+        pointsRepository.deleteAllByUser(user.id!!)
+        return ok("All of your points have been deleted!")
+    }
+
+
+    protected open fun buildJsonArray(points: List<Point2DRow>): jakarta.json.JsonArray {
+        val arrayBuilder = Json.createArrayBuilder()
+        for (p in points) {
+            val pointObj = Json.createObjectBuilder()
+                .add("id", p.id ?: -1)
+                .add("x", p.point2DR.x.toDouble())
+                .add("y", p.point2DR.y.toDouble())
+                .add("R", p.point2DR.R.toDouble())
+                .add("inArea", p.inArea)
+                .add("executionTime", p.executionTime)
+                .add("timestamp", p.formattedTimestamp)
+                .add("username", p.user.username)
+                .build()
+            arrayBuilder.add(pointObj)
+        }
+        return arrayBuilder.build()
     }
 }

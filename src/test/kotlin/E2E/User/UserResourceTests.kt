@@ -1,11 +1,9 @@
 import api.ProjectHTTPHeaders
 import io.restassured.http.ContentType
-import io.restassured.module.kotlin.extensions.Extract
 import io.restassured.module.kotlin.extensions.Given
 import io.restassured.module.kotlin.extensions.When
 import io.restassured.module.kotlin.extensions.Then
 import org.hamcrest.Matchers.equalTo
-import org.junit.jupiter.api.Order
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 
@@ -42,7 +40,6 @@ class UserResourceTests {
 
     @Test
     fun `should register, auth and delete new user successfully`() {
-        // 1. Регистрация
         Given {
             baseUri(baseUrl)
             contentType(ContentType.JSON)
@@ -67,7 +64,7 @@ class UserResourceTests {
         }
 
         val token = authResponse.extract().path<String>("token")
-        println("TOKEN : " + token)
+        println("TOKEN : $token")
 
         Given {
             baseUri(baseUrl)

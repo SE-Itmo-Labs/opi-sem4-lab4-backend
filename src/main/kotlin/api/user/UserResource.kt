@@ -48,6 +48,12 @@ open class UserResource : GenericResource() {
     }
 
     @POST
+    @Path("/logout/")
+    open fun logout(): Response {
+        return ok("Logged out")
+    }
+
+    @POST
     @Path("/register/")
     open fun register(user : UserDto) : Response {
 
@@ -74,7 +80,7 @@ open class UserResource : GenericResource() {
 
         val requestedUsername = user.username
         if (requestedUsername != null && requestedUsername != currentUsername) {
-            return badRequest("Вы можете удалять только себя")
+            return badRequest("Вы можете удалять только себя, очев")
         }
 
         val deleted = userService.deleteUser(currentUsername)
