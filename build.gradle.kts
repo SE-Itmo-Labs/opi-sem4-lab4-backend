@@ -17,6 +17,10 @@ dependencies {
     runtimeOnly("io.jsonwebtoken:jjwt-impl:0.13.0")
     runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.13.0")
 
+    // REST TESTS
+    testImplementation("io.rest-assured:rest-assured:5.5.0")
+    testImplementation("io.rest-assured:kotlin-extensions:5.5.0")
+
     compileOnly("jakarta.platform:jakarta.jakartaee-web-api:10.0.0")
     compileOnly("jakarta.ws.rs:jakarta.ws.rs-api:3.1.0")
 
@@ -26,6 +30,7 @@ dependencies {
     providedCompile("jakarta.platform:jakarta.jakartaee-api:10.0.0")
     implementation("org.eclipse.persistence:org.eclipse.persistence.jpa:4.0.8")
 
+    testImplementation("com.fasterxml.jackson.core:jackson-databind:2.20.1")
     implementation("com.fasterxml.jackson.core:jackson-databind:2.20.1")
 
     implementation("at.favre.lib:bcrypt:0.10.2")

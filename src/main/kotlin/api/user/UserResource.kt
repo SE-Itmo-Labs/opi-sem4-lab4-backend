@@ -1,11 +1,12 @@
 package api.user
 
 import JwtUtil
-import api.ErrorResponse
 import api.GenericResource
-import jakarta.enterprise.context.RequestScoped
+import api.response.GeneralResponseBuilder
 import jakarta.inject.Inject
+import jakarta.json.Json
 import jakarta.ws.rs.Consumes
+import jakarta.ws.rs.DELETE
 import jakarta.ws.rs.POST
 import jakarta.ws.rs.Path
 import jakarta.ws.rs.Produces
@@ -31,16 +32,20 @@ open class UserResource : GenericResource() {
         val username = user.username ?: return badRequest("Где username")
         val password = user.password ?: return badRequest("Где password")
 
+        val response = GeneralResponseBuilder()
+
         val authenticatedUser = userService.authenticate(username, password)
             ?: return unauthorized("Неверный пароль ввел, или юзернейм?")
 
         val token = jwtUtil.generateToken(username)
-        return Response.ok(mapOf("token" to token)).build()
+
+        response.add("token", token)
+
+        return Response.ok(response.ok("Authorized successfully!")).build()
     }
 
     @POST
     @Path("/register/")
-    @Produces(MediaType.APPLICATION_JSON)
     open fun register(user : UserDto) : Response {
 
         val username = user.username ?: return badRequest("Где username")
@@ -48,11 +53,15 @@ open class UserResource : GenericResource() {
 
         return try {
             userService.register(username, password)
-            Response.ok().entity("User registered successfully").build()
+            ok("User registered successfully!")
         } catch (e: IllegalArgumentException) {
-            Response.status(Response.Status.CONFLICT)
-                .entity(ErrorResponse().error(e.message ?: "Registration failed"))
-                .build()
+            conflict(e.message ?: "Registration failed")
         }
+    }
+
+    @DELETE
+    @Path("/delete/")
+    open fun delete(user : UserDto) : Response {
+        return Response.ok().build()
     }
 }

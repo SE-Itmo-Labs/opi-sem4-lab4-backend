@@ -1,8 +1,9 @@
 package api.filters.authorization
 
 import JwtUtil
-import api.ErrorResponse
+import api.GenericResource
 import api.ProjectHTTPHeaders
+import api.response.GeneralResponseBuilder
 import jakarta.annotation.Priority
 import jakarta.enterprise.context.RequestScoped
 import jakarta.inject.Inject
@@ -21,16 +22,14 @@ open class AuthorizationFilter : ContainerRequestFilter {
     private lateinit var jwtUtil: JwtUtil
 
     companion object {
-        private val RESPONSE_UNAUTHORIZED = Response
-            .status(Response.Status.UNAUTHORIZED)
-            .entity(ErrorResponse().error("Иди регайся"))
-            .build()
+//        private val RESPONSE_UNAUTHORIZED = Response
+//            .status(Response.Status.UNAUTHORIZED)
+//            .entity(ErrorResponse().error("Иди регайся"))
+//            .build()
 
         private val PUBLIC_PATHS = setOf(
             "/user/auth",
-            "/user/register",
-            "/user/auth/",
-            "/user/register/"
+            "/user/register"
         )
     }
 
@@ -41,11 +40,14 @@ open class AuthorizationFilter : ContainerRequestFilter {
         val authHeader = requestContext.getHeaderString(ProjectHTTPHeaders.AUTHORIZATION)
 
         if (authHeader.isNullOrEmpty() || !jwtUtil.validateToken(authHeader)) {
-            requestContext.abortWith(RESPONSE_UNAUTHORIZED)
+            requestContext.abortWith(
+                GenericResource.unauthorized("Иди регайся")
+            )
         }
     }
 
     private fun isPublicPath(requestPath: String): Boolean {
-        return PUBLIC_PATHS.contains(requestPath)
+        val normalizedPath = requestPath.removeSuffix("/")
+        return PUBLIC_PATHS.any { it.removeSuffix("/") == normalizedPath }
     }
 }
