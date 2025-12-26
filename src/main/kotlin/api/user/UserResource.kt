@@ -2,6 +2,7 @@ package api.user
 
 import JwtUtil
 import api.GenericResource
+import api.ProjectHTTPHeaders
 import api.response.GeneralResponseBuilder
 import jakarta.inject.Inject
 import jakarta.json.Json
@@ -10,6 +11,8 @@ import jakarta.ws.rs.DELETE
 import jakarta.ws.rs.POST
 import jakarta.ws.rs.Path
 import jakarta.ws.rs.Produces
+import jakarta.ws.rs.core.Context
+import jakarta.ws.rs.core.HttpHeaders
 import jakarta.ws.rs.core.MediaType
 import jakarta.ws.rs.core.Response
 import service.UserService
@@ -61,7 +64,24 @@ open class UserResource : GenericResource() {
 
     @DELETE
     @Path("/delete/")
-    open fun delete(user : UserDto) : Response {
-        return Response.ok().build()
+    open fun delete(@Context headers: HttpHeaders, user: UserDto) : Response {
+
+        val authHeader = headers.getHeaderString(ProjectHTTPHeaders.AUTHORIZATION)
+            ?: return unauthorized("Токен отсутствует")
+
+        val currentUsername = jwtUtil.getUsernameFromToken(authHeader)
+            ?: return unauthorized("Невалидный токен")
+
+        val requestedUsername = user.username
+        if (requestedUsername != null && requestedUsername != currentUsername) {
+            return badRequest("Вы можете удалять только себя")
+        }
+
+        val deleted = userService.deleteUser(currentUsername)
+        if (!deleted) {
+            return badRequest("Пользователь не найден")
+        }
+
+        return ok("User deleted successfully!")
     }
 }

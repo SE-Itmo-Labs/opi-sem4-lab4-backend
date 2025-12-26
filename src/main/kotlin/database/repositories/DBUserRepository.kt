@@ -22,4 +22,8 @@ open class DBUserRepository : JpaRepository<User, Long>() {
             .resultList
             .firstOrNull()
     }
+
+    open fun deleteByUser(user: User) {
+        entityManager.remove(user)
+    }
 }

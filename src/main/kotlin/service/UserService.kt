@@ -1,6 +1,7 @@
 package service
 
 import database.model.User
+import database.repositories.DBPointsRepository
 import database.repositories.DBUserRepository
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
@@ -12,6 +13,9 @@ open class UserService {
 
     @Inject
     private lateinit var userRepository: DBUserRepository
+
+    @Inject
+    private lateinit var pointsRepository: DBPointsRepository
 
     @Inject
     private lateinit var passwordEncoder: PasswordEncoder
@@ -45,5 +49,16 @@ open class UserService {
             return user
         }
         return null
+    }
+
+    @Transactional
+    open fun deleteUser(username: String): Boolean {
+        val user = userRepository.findByUsername(username) ?: return false
+
+        pointsRepository.deleteAllByUser(user.id!!)
+
+        userRepository.deleteByUser(user)
+
+        return true
     }
 }
