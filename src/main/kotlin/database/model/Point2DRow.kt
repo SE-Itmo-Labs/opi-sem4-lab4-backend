@@ -1,6 +1,6 @@
 package database.model
 
-import com.ssnagin.servlets.coordinates.geometry.Point2DR
+import coordinates.geometry.Point2DR
 import jakarta.persistence.Column
 import jakarta.persistence.Embedded
 import jakarta.persistence.Entity

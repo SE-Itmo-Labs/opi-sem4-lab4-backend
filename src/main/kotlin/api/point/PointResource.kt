@@ -3,22 +3,23 @@ package api.point
 import JwtUtil
 import api.GenericResource
 import api.ProjectHTTPHeaders
+import api.point.PointResourceUtil.Companion.buildJsonArray
 import api.response.GeneralResponseBuilder
-import com.ssnagin.servlets.coordinates.exceptions.PointOutOfBoundariesException
-import com.ssnagin.servlets.coordinates.geometry.Point2DR
-import com.ssnagin.servlets.coordinates.validator.GeometryValidator
+import coordinates.builders.Point2DRBuilder
+import coordinates.exceptions.PointOutOfBoundariesException
+import coordinates.geometry.Point2DR
+import coordinates.validator.GeometryValidator
 import database.model.DotType
 import database.model.Point2DRow
 import database.repositories.DBPointsRepository
 import database.repositories.DBUserRepository
 import jakarta.inject.Inject
-import jakarta.json.Json
-import jakarta.json.JsonArrayBuilder
 import jakarta.ws.rs.*
 import jakarta.ws.rs.core.Context
 import jakarta.ws.rs.core.HttpHeaders
 import jakarta.ws.rs.core.MediaType
 import jakarta.ws.rs.core.Response
+import java.lang.IllegalArgumentException
 import java.time.LocalDateTime
 
 @Path("/point")
@@ -31,6 +32,9 @@ open class PointResource : GenericResource() {
 
     @Inject
     private lateinit var userRepository: DBUserRepository
+
+    @Inject
+    private lateinit var webSocket: PointWSResource
 
     @Inject
     private lateinit var jwtUtil: JwtUtil
@@ -66,7 +70,8 @@ open class PointResource : GenericResource() {
 
         val responseBuilder = GeneralResponseBuilder()
 
-        val point2DR = Point2DR(pointDto.x, pointDto.y, pointDto.R)
+        val point2DR = Point2DRBuilder.build(pointDto.x, pointDto.y, pointDto.R)
+
         var inArea = false
 
         val startTime = System.nanoTime()
@@ -74,7 +79,12 @@ open class PointResource : GenericResource() {
         try {
             geometryValidator.validate(point2DR)
             inArea = true
-        } catch (_: PointOutOfBoundariesException) { }
+        } catch (e: PointOutOfBoundariesException) {
+
+        }
+        catch (e: IllegalArgumentException) {
+            return GenericResource.error(e.message!!)
+        }
 
         val endTime = System.nanoTime()
         val executionTime = (endTime - startTime)
@@ -94,8 +104,12 @@ open class PointResource : GenericResource() {
         point.add(pointRow)
 
         responseBuilder.add("points", buildJsonArray(point))
+        val res = responseBuilder.ok("Point has been thrown")
 
-        return Response.ok(responseBuilder.ok("Point has been thrown")).build()
+        // Бродкастим тут
+        webSocket.broadcastToUser(user.id!!, res.toString())
+
+        return Response.ok(res).build()
     }
 
     @GET
@@ -169,24 +183,5 @@ open class PointResource : GenericResource() {
 
         pointsRepository.deleteAllByUser(user.id!!)
         return ok("All of your points have been deleted!")
-    }
-
-
-    protected open fun buildJsonArray(points: List<Point2DRow>): jakarta.json.JsonArray {
-        val arrayBuilder = Json.createArrayBuilder()
-        for (p in points) {
-            val pointObj = Json.createObjectBuilder()
-                .add("id", p.id ?: -1)
-                .add("x", p.point2DR.x.toDouble())
-                .add("y", p.point2DR.y.toDouble())
-                .add("R", p.point2DR.R.toDouble())
-                .add("inArea", p.inArea)
-                .add("executionTime", p.executionTime)
-                .add("timestamp", p.formattedTimestamp)
-                .add("username", p.user.username)
-                .build()
-            arrayBuilder.add(pointObj)
-        }
-        return arrayBuilder.build()
     }
 }

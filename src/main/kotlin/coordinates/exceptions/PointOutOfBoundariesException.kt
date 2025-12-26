@@ -1,4 +1,4 @@
-package com.ssnagin.servlets.coordinates.exceptions
+package coordinates.exceptions
 
 import java.lang.Exception
 

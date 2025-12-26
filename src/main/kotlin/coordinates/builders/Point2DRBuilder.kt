@@ -1,6 +1,6 @@
-package com.ssnagin.servlets.coordinates.builders
+package coordinates.builders
 
-import com.ssnagin.servlets.coordinates.geometry.Point2DR
+import coordinates.geometry.Point2DR
 import java.math.BigDecimal
 
 object Point2DRBuilder {

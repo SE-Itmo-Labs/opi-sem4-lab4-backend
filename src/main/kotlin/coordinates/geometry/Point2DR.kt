@@ -1,4 +1,4 @@
-package com.ssnagin.servlets.coordinates.geometry
+package coordinates.geometry
 
 import jakarta.persistence.Embeddable
 
