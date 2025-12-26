@@ -8,12 +8,6 @@ open class GenericResource {
 
     companion object {
 
-        fun error(message: String) : Response {
-            return generateSampleResponse(Response.Status.OK)
-                .entity(GeneralResponseBuilder().error(message))
-                .build()
-        }
-
         fun ok(message: String) : Response {
             return generateSampleResponse(Response.Status.OK)
                 .entity(GeneralResponseBuilder().ok(message))

@@ -83,7 +83,7 @@ open class PointResource : GenericResource() {
 
         }
         catch (e: IllegalArgumentException) {
-            return GenericResource.error(e.message!!)
+            return badRequest(e.message!!)
         }
 
         val endTime = System.nanoTime()
@@ -143,6 +143,7 @@ open class PointResource : GenericResource() {
 
     @DELETE
     @Path("/{id}")
+    @Produces(MediaType.APPLICATION_JSON)
     open fun deletePoint(
         @Context headers: HttpHeaders,
         @PathParam("id") id: Long
