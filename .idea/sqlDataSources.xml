@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="DdlMappings">
+    <mapping uuid="31b81591-3baf-4d7a-a8c1-15d7629431aa" name="wildfly_db@localhost Mapping">
+      <data-sources db="0d4542db-236b-4636-a8dd-9da047cd4c8c" ddl="1550bb54-3007-455b-9ff3-d380ed5eab25" />
+    </mapping>
+  </component>
+  <component name="SqlDataSourceStorage">
+    <option name="dataSources">
+      <list>
+        <State>
+          <option name="id" value="1550bb54-3007-455b-9ff3-d380ed5eab25" />
+          <option name="name" value="wildfly_db@localhost (DDL)" />
+          <option name="dbmsName" value="POSTGRES" />
+          <option name="parent" value="0d4542db-236b-4636-a8dd-9da047cd4c8c" />
+          <option name="urls">
+            <array />
+          </option>
+          <option name="outLayout" value="File per object by schema.groovy" />
+        </State>
+      </list>
+    </option>
+  </component>
+</project>
