@@ -1,5 +1,3 @@
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-
 plugins {
     kotlin("jvm") version "2.1.20"
     war
@@ -47,6 +45,27 @@ kotlin {
     jvmToolchain(17)
 }
 
+// INIT VARIABLES
+
+var projectName = project.findProperty("sn.project.name")
+val projectGroup = project.findProperty("sn.project.group")
+val projectVersion = project.findProperty("sn.project.version")
+
+val projectResourcesPath = project.findProperty("sn.project.resources_path")
+
+// WAR
+
+var warFilename = project.findProperty("sn.war.filename")
+var warDirectory = project.findProperty("sn.war.directory")
+
+// MUSIC
+
+val snMusicPath = project.findProperty("sn.music.path")
+
+// ALT
+
+val kotlinDir = project.findProperty("sn.alt.kotlin.dir")
+
 // 1. Compile
 
 tasks.register("compile") {
@@ -56,8 +75,8 @@ tasks.register("compile") {
 // 2. Build - уже есть
 
 tasks.war {
-    webAppDirectory = file("src/main/webapp")
-    archiveFileName.set("lab4.war")
+    webAppDirectory = file(warDirectory.toString())
+    archiveFileName.set(warFilename.toString())
 }
 
 tasks.named("build") {
@@ -68,7 +87,7 @@ tasks.named("build") {
     dependsOn("war")
 
     doLast {
-        println("Sources were successfully built: " + "lab4.war")
+        println("Sources were successfully built: $warFilename")
     }
 }
 
@@ -87,8 +106,6 @@ tasks.test {
 
 tasks.register("music") {
     dependsOn("build")
-
-    val snMusicPath = project.findProperty("sn.music.path")
 
     println(snMusicPath)
 
@@ -109,30 +126,62 @@ tasks.register("music") {
     }
 }
 
+val altSrcName = project.findProperty("sn.alt.src.dir.name")
 
-val altSourceDir = layout.buildDirectory.dir("alt-src")
+val altSourceDir = layout.buildDirectory.dir(altSrcName.toString())
+
+val projectClasses = mutableSetOf<String>()
+val projectVars = mutableSetOf<String>()
+
+val srcDir = file(kotlinDir.toString())
+
+if (srcDir.exists()) {
+    fileTree(srcDir).matching { include("**/*.kt") }.forEach { file ->
+
+        projectClasses.add(file.nameWithoutExtension)
+
+        file.readLines().forEach { line ->
+            val match = Regex("\\b(?:val|var)\\s+([a-zA-Z_][a-zA-Z0-9_]*)").find(line)
+            if (match != null) {
+                projectVars.add(match.groupValues[1])
+            }
+        }
+    }
+}
+
+val ignoredVars = setOf("id", "message", "status", "body", "e", "it", "x", "y")
+projectVars.removeAll(ignoredVars)
+
+val sortedClasses = projectClasses.sortedByDescending { it.length }
+val sortedVars = projectVars.sortedByDescending { it.length }
+
 
 tasks.register<Copy>("prepareAltSources") {
-    from("src/main/kotlin")
+
+    from(srcDir)
     into(altSourceDir)
 
     rename { fileName ->
-        fileName
-            .replace("PointResource.kt", "AltPointResource.kt")
-            .replace("UserResource.kt", "AltUserResource.kt")
-            .replace("PointWSResource.kt", "AltPointWSResource.kt")
-            .replace("PointDto.kt", "AltPointDto.kt")
+        if (fileName.endsWith(".kt")) "Alt$fileName" else fileName
     }
 
     filter { line ->
-        line
-            .replace("PointResource", "AltPointResource")
-            .replace("UserResource", "AltUserResource")
-            .replace("PointWSResource", "AltPointWSResource")
-            .replace("PointDto", "AltPointDto")
-            .replace("username", "altUsername")
-            .replace("password", "altPassword")
+        var modifiedLine = line
+
+        // PointResource -> AltPointResource
+        sortedClasses.forEach { className ->
+            modifiedLine = modifiedLine.replace("\\b$className\\b".toRegex(), "Alt$className")
+        }
+
+        // var/val username -> altUsername
+        sortedVars.forEach { varName ->
+            val altVarName = "alt" + varName.replaceFirstChar { it.uppercase() }
+            modifiedLine = modifiedLine.replace("\\b$varName\\b".toRegex(), altVarName)
+        }
+
+        modifiedLine
     }
+
 }
 
 sourceSets {
@@ -150,19 +199,17 @@ tasks.named("compileAltKotlin") {
 
 tasks.register<Jar>("altJar") {
     dependsOn("compileAltKotlin")
-    archiveBaseName.set("lab4" + "-alt")
-    archiveVersion.set("1.0")
+    archiveBaseName.set("$projectName-alt")
+    archiveVersion.set(projectVersion.toString())
 
-    // Берем скомпилированные классы из нового SourceSet
     from(sourceSets["alt"].output)
 
-    // Берем ресурсы из основной папки ресурсов
-    from("src/main/resources") {
+    from(projectResourcesPath.toString()) {
         include("**/*")
     }
 
     doLast {
-        println("✅ Alt JAR: ${archiveFile.get().asFile.absolutePath}")
+        println("Alt was completed: ${archiveFile.get().asFile.absolutePath}")
     }
 }
 

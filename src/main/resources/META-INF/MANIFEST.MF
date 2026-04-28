@@ -1,1 +1,4 @@
 Manifest-Version: 1.0
+Implementation-Title: lab4
+Implementation-Version: 1.0.0
+Created-By: ssnagin
