@@ -46,28 +46,6 @@ kotlin {
     jvmToolchain(17)
 }
 
-// INIT VARIABLES
-
-var projectName = project.findProperty("sn.project.name")
-val projectGroup = project.findProperty("sn.project.group")
-val projectVersion = project.findProperty("sn.project.version")
-
-val projectResourcesPath = project.findProperty("sn.project.resources_path")
-
-// WAR
-
-var warFilename = project.findProperty("sn.war.filename")
-var warDirectory = project.findProperty("sn.war.directory")
-
-// MUSIC
-
-val snMusicPath = project.findProperty("sn.music.path")
-val snMusicErrorPath = project.findProperty("sn.music_error.path")
-
-// ALT
-
-val kotlinDir = project.findProperty("sn.alt.kotlin.dir")
-
 // 1. Compile
 
 tasks.register("compile") {
@@ -77,11 +55,16 @@ tasks.register("compile") {
 // 2. Build - уже есть
 
 tasks.war {
+    var warDirectory = project.findProperty("sn.war.directory")
+    var warFilename = project.findProperty("sn.war.filename")
+
     webAppDirectory = file(warDirectory.toString())
     archiveFileName.set(warFilename.toString())
 }
 
 tasks.named("build") {
+
+    var warFilename = project.findProperty("sn.war.filename")
 
     setDependsOn(emptyList<Any>())
 
@@ -107,6 +90,9 @@ tasks.test {
 // 5. Music
 
 tasks.register("music") {
+
+    val snMusicPath = project.findProperty("sn.music.path")
+
     dependsOn("build")
 
     println(snMusicPath)
@@ -126,75 +112,115 @@ tasks.register("music") {
 
 // вынести в функцию?
 
+
+
 val altSrcName = project.findProperty("sn.alt.src.dir.name")
-
 val altSourceDir = layout.buildDirectory.dir(altSrcName.toString())
+val kotlinDir = project.findProperty("sn.alt.kotlin.dir")
 
-val projectClasses = mutableSetOf<String>()
-val projectVars = mutableSetOf<String>()
+// Считываем регулярки из properties (или ставим дефолт, если не нашли)
+val varDeclRegexProp = project.findProperty("sn.alt.regex.var_declaration")?.toString()
+    ?: "\\b(?:val|var)\\s+(`[^`]+`|[\\p{L}_][\\p{L}\\d_]*)"
+val varReplaceRegexProp = project.findProperty("sn.alt.regex.var_replace")?.toString()
+    ?: "(?<![\\p{L}\\d_])%s(?![\\p{L}\\d_])"
+val classReplaceRegexProp = project.findProperty("sn.alt.regex.class_replace")?.toString()
+    ?: "(?<![\\p{L}\\d_])%s(?![\\p{L}\\d_])"
 
-val srcDir = file(kotlinDir.toString())
 
-if (srcDir.exists()) {
-    fileTree(srcDir).matching { include("**/*.kt") }.forEach { file ->
+tasks.register("prepareAltSources") {
+    val srcDir = file(kotlinDir.toString())
+    val destDir = altSourceDir.get().asFile
 
-        projectClasses.add(file.nameWithoutExtension)
+    inputs.dir(srcDir)
+    outputs.dir(destDir)
 
-        file.readLines().forEach { line ->
-            val match = Regex("\\b(?:val|var)\\s+([a-zA-Z_][a-zA-Z0-9_]*)").find(line)
-            if (match != null) {
-                projectVars.add(match.groupValues[1])
+    doLast {
+        val projectClasses = mutableSetOf<String>()
+        val projectVars = mutableSetOf<String>()
+        val varDeclRegex = varDeclRegexProp.toRegex()
+
+
+        if (srcDir.exists()) {
+            fileTree(srcDir).matching { include("**/*.kt") }.forEach { file ->
+                projectClasses.add(file.nameWithoutExtension)
+
+                file.readLines().forEach { line ->
+                    varDeclRegex.findAll(line).forEach { match ->
+                        val varName = match.groups[1]?.value
+                        if (varName != null) {
+                            projectVars.add(varName)
+                        }
+                    }
+                }
+            }
+        }
+
+        val ignoredVars = setOf(
+            "id", "message", "status", "body", "e", "it", "x", "y",
+            "data", "class", "val", "var", "fun", "if", "else", "for", "while", "return", "this", "super", "object", "is", "as", "in", "typealias", "package", "import", "true", "false", "null",
+            "AUTHORIZATION", "OK", "BAD_REQUEST", "UNAUTHORIZED", "CONFLICT",
+            "json" // <--- ДОБАВЛЯЕМ СЮДА
+        )
+        projectVars.removeAll(ignoredVars)
+
+        val sortedClasses = projectClasses.sortedByDescending { it.length }
+        val sortedVars = projectVars.sortedByDescending { it.length }
+
+
+        destDir.deleteRecursively()
+        destDir.mkdirs()
+
+        if (srcDir.exists()) {
+            fileTree(srcDir).matching { include("**/*.kt") }.forEach { file ->
+                val relativePath = file.relativeTo(srcDir)
+                val newFileName = if (file.name.endsWith(".kt")) "Alt${file.name}" else file.name
+                val destFile = File(destDir, relativePath.parentFile?.path?.let { "$it/$newFileName" } ?: newFileName)
+                destFile.parentFile.mkdirs()
+
+                var content = file.readText()
+
+                sortedClasses.forEach { className ->
+                    val classRegex = classReplaceRegexProp.replace("%s", className).toRegex()
+                    content = content.replace(classRegex, "Alt$className")
+                }
+
+                val lines = content.lines().map { line ->
+                    val trimmed = line.trimStart()
+
+                    if (trimmed.startsWith("package ") || trimmed.startsWith("import ")) {
+                        line
+                    } else {
+                        var modifiedLine = line
+                        sortedVars.forEach { varName ->
+                            val isBackticked = varName.startsWith("`") && varName.endsWith("`")
+                            val cleanName = if (isBackticked) varName.substring(1, varName.length - 1) else varName
+
+                            val altVarName = if (isBackticked) {
+                                "`alt${cleanName.replaceFirstChar { it.uppercase() }}`"
+                            } else {
+                                "alt${cleanName.replaceFirstChar { it.uppercase() }}"
+                            }
+
+                            if (isBackticked) {
+                                modifiedLine = modifiedLine.replace(varName, altVarName)
+                            } else {
+                                val varRegex = varReplaceRegexProp.replace("%s", cleanName).toRegex()
+                                modifiedLine = modifiedLine.replace(varRegex, altVarName)
+                            }
+                        }
+                        modifiedLine
+                    }
+                }
+
+                destFile.writeText(lines.joinToString("\n"))
             }
         }
     }
 }
 
-val ignoredVars = setOf("id", "message", "status", "body", "e", "it", "x", "y")
-projectVars.removeAll(ignoredVars)
-
-val sortedClasses = projectClasses.sortedByDescending { it.length }
-val sortedVars = projectVars.sortedByDescending { it.length }
-
-
-tasks.register<Copy>("prepareAltSources") {
-
-    from(srcDir)
-    into(altSourceDir)
-
-    rename { fileName ->
-        if (fileName.endsWith(".kt")) "Alt$fileName" else fileName
-    }
-
-    filter { line ->
-        var modifiedLine = line
-
-        // Class -> AltClass
-        sortedClasses.forEach { className ->
-            modifiedLine = modifiedLine.replace("\\b$className\\b".toRegex(), "Alt$className")
-        }
-
-        // Alt -> AltAlt - описать в параметрах + смотреть исключения
-        // Вынести регулярки, разобраться какие переменные можно и нужно использовать в глобальной области видимости (если надо обернуть в функцию)
-        // Ещё раз разобраться и переписать код на alt
-
-        //
-
-        // Сделать музыку на fail
-
-        // var/val test -> altTest
-        sortedVars.forEach { varName ->
-            val altVarName = "alt" + varName.replaceFirstChar { it.uppercase() }
-            modifiedLine = modifiedLine.replace("\\b$varName\\b".toRegex(), altVarName)
-        }
-
-        modifiedLine
-    }
-}
-
 sourceSets {
-
     create("alt") {
-        java.srcDir(altSourceDir.toString())
+        java.srcDir(altSourceDir)
         compileClasspath += sourceSets.main.get().compileClasspath
     }
 }
@@ -204,6 +230,11 @@ tasks.named("compileAltKotlin") {
 }
 
 tasks.register<Jar>("altJar") {
+
+    val projectResourcesPath = project.findProperty("sn.project.resources_path")
+
+    var projectName = project.findProperty("sn.project.name")
+    val projectVersion = project.findProperty("sn.project.version")
 
     dependsOn("compileAltKotlin")
     archiveBaseName.set("$projectName-alt")
