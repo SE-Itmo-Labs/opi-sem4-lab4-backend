@@ -159,7 +159,7 @@ tasks.register("prepareAltSources") {
             "id", "message", "status", "body", "e", "it", "x", "y",
             "data", "class", "val", "var", "fun", "if", "else", "for", "while", "return", "this", "super", "object", "is", "as", "in", "typealias", "package", "import", "true", "false", "null",
             "AUTHORIZATION", "OK", "BAD_REQUEST", "UNAUTHORIZED", "CONFLICT",
-            "json" // <--- ДОБАВЛЯЕМ СЮДА
+            "json"
         )
         projectVars.removeAll(ignoredVars)
 
