@@ -18,6 +18,7 @@ import jakarta.ws.rs.core.Context
 import jakarta.ws.rs.core.HttpHeaders
 import jakarta.ws.rs.core.MediaType
 import jakarta.ws.rs.core.Response
+import mbeans.PointsCounter
 import java.lang.IllegalArgumentException
 import java.time.LocalDateTime
 
@@ -36,6 +37,12 @@ open class PointResource : GenericResource() {
 
     @Inject
     private lateinit var jwtUtil: JwtUtil
+
+    @Inject
+    private lateinit var pointsCounter: PointsCounter
+
+    @Inject
+    private lateinit var figureArea: mbeans.FigureArea
 
     private val geometryValidator = GeometryValidator()
 
@@ -76,9 +83,13 @@ open class PointResource : GenericResource() {
             geometryValidator.validate(point2DR)
             inArea = true
         } catch (e: PointOutOfBoundariesException) {
+            inArea = false
         } catch (e: IllegalArgumentException) {
             return badRequest(e.message!!)
         }
+
+        pointsCounter.addPoint(inArea)
+        figureArea.addPoint(pointDto.x.toDouble(), pointDto.y.toDouble())
 
         val endTime = System.nanoTime()
         val executionTime = (endTime - startTime)
