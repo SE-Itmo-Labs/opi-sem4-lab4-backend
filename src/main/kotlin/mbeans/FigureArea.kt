@@ -32,6 +32,10 @@ open class FigureArea : FigureAreaMBean {
         if (mbs.isRegistered(name)) mbs.unregisterMBean(name)
     }
 
+    override fun reset() {
+        this.points.clear()
+    }
+
     open fun addPoint(x: Double, y: Double) {
         points.add(Pair(x, y))
     }
